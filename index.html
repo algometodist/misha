@@ -1,0 +1,2099 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COSMOS — За пределами известного</title>
+<style>
+  :root {
+    --neon-blue: #00d4ff;
+    --neon-purple: #8b5cf6;
+    --neon-pink: #f472b6;
+    --deep-space: #020408;
+    --star-white: #e8f4f8;
+    --glass: rgba(255,255,255,0.04);
+    --glass-border: rgba(255,255,255,0.08);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--deep-space);
+    color: var(--star-white);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* CUSTOM CURSOR */
+  .cursor {
+    position: fixed;
+    width: 12px;
+    height: 12px;
+    background: var(--neon-blue);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: transform 0.1s, width 0.3s, height 0.3s, opacity 0.3s;
+    box-shadow: 0 0 15px var(--neon-blue), 0 0 30px var(--neon-blue);
+    mix-blend-mode: screen;
+  }
+  .cursor-ring {
+    position: fixed;
+    width: 40px;
+    height: 40px;
+    border: 1px solid rgba(0,212,255,0.4);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9998;
+    transform: translate(-50%, -50%);
+    transition: transform 0.15s ease, width 0.3s, height 0.3s;
+  }
+  .cursor.hover { width: 20px; height: 20px; }
+  .cursor-ring.hover { width: 60px; height: 60px; border-color: rgba(0,212,255,0.6); }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: #010205; }
+  ::-webkit-scrollbar-thumb { background: var(--neon-blue); border-radius: 2px; }
+
+  /* CANVAS STAR FIELD */
+  #starCanvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding: 20px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    backdrop-filter: blur(20px);
+    background: rgba(2,4,8,0.6);
+    border-bottom: 1px solid var(--glass-border);
+    transition: all 0.3s;
+  }
+  nav.scrolled {
+    padding: 14px 40px;
+    background: rgba(2,4,8,0.92);
+  }
+  .nav-logo {
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: 0.3em;
+    color: var(--neon-blue);
+    text-shadow: 0 0 20px var(--neon-blue);
+    text-transform: uppercase;
+  }
+  .nav-links {
+    display: flex;
+    gap: 32px;
+    list-style: none;
+  }
+  .nav-links a {
+    color: rgba(232,244,248,0.6);
+    text-decoration: none;
+    font-size: 0.82rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    transition: color 0.3s;
+    position: relative;
+  }
+  .nav-links a::after {
+    content: '';
+    position: absolute;
+    bottom: -4px; left: 0;
+    width: 0; height: 1px;
+    background: var(--neon-blue);
+    transition: width 0.3s;
+  }
+  .nav-links a:hover { color: var(--neon-blue); }
+  .nav-links a:hover::after { width: 100%; }
+
+  /* PROGRESS BAR */
+  .progress-bar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--neon-blue), var(--neon-purple), var(--neon-pink));
+    z-index: 200;
+    transition: width 0.1s;
+    box-shadow: 0 0 10px var(--neon-blue);
+  }
+
+  /* SECTIONS */
+  section {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* HERO */
+  .hero {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 40%, rgba(139,92,246,0.15) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 40% at 20% 80%, rgba(0,212,255,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse 30% 50% at 80% 10%, rgba(244,114,182,0.06) 0%, transparent 50%);
+  }
+
+  .hero-nebula {
+    position: absolute;
+    inset: -50px;
+    background-image: url('https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=1800&q=80');
+    background-size: cover;
+    background-position: center;
+    opacity: 0.18;
+    filter: blur(2px);
+    transform: scale(1.05);
+    will-change: transform;
+  }
+
+  .hero-content {
+    position: relative;
+    z-index: 2;
+    padding: 0 20px;
+  }
+
+  .hero-eyebrow {
+    font-size: 0.72rem;
+    letter-spacing: 0.5em;
+    text-transform: uppercase;
+    color: var(--neon-blue);
+    margin-bottom: 24px;
+    opacity: 0;
+    animation: fadeUp 1s 0.3s forwards;
+  }
+
+  .hero-title {
+    font-size: clamp(3.5rem, 10vw, 9rem);
+    font-weight: 900;
+    line-height: 0.9;
+    letter-spacing: -0.02em;
+    margin-bottom: 32px;
+    background: linear-gradient(135deg, #fff 0%, rgba(0,212,255,0.9) 40%, rgba(139,92,246,0.8) 70%, rgba(244,114,182,0.7) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    opacity: 0;
+    animation: fadeUp 1s 0.5s forwards;
+    text-shadow: none;
+    filter: drop-shadow(0 0 60px rgba(0,212,255,0.3));
+  }
+
+  .hero-subtitle {
+    font-size: clamp(1rem, 2vw, 1.25rem);
+    color: rgba(232,244,248,0.65);
+    max-width: 560px;
+    margin: 0 auto 48px;
+    line-height: 1.7;
+    font-weight: 300;
+    opacity: 0;
+    animation: fadeUp 1s 0.7s forwards;
+  }
+
+  .hero-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 40px;
+    border: 1px solid var(--neon-blue);
+    color: var(--neon-blue);
+    text-decoration: none;
+    font-size: 0.85rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    transition: all 0.4s;
+    position: relative;
+    overflow: hidden;
+    opacity: 0;
+    animation: fadeUp 1s 0.9s forwards;
+  }
+  .hero-cta::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--neon-blue);
+    transform: translateX(-101%);
+    transition: transform 0.4s cubic-bezier(0.4,0,0.2,1);
+    z-index: -1;
+  }
+  .hero-cta:hover { color: var(--deep-space); }
+  .hero-cta:hover::before { transform: translateX(0); }
+
+  .hero-scroll {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    opacity: 0;
+    animation: fadeIn 1s 1.5s forwards;
+  }
+  .hero-scroll span {
+    font-size: 0.65rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: rgba(232,244,248,0.4);
+  }
+  .scroll-line {
+    width: 1px;
+    height: 50px;
+    background: linear-gradient(to bottom, var(--neon-blue), transparent);
+    animation: scrollAnim 2s ease-in-out infinite;
+  }
+
+  /* FACTS TICKER */
+  .ticker-wrap {
+    background: rgba(0,212,255,0.06);
+    border-top: 1px solid rgba(0,212,255,0.15);
+    border-bottom: 1px solid rgba(0,212,255,0.15);
+    padding: 14px 0;
+    overflow: hidden;
+    position: relative;
+    z-index: 2;
+  }
+  .ticker {
+    display: flex;
+    gap: 80px;
+    animation: ticker 40s linear infinite;
+    white-space: nowrap;
+  }
+  .ticker-item {
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(0,212,255,0.7);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-shrink: 0;
+  }
+  .ticker-dot {
+    width: 4px; height: 4px;
+    background: var(--neon-blue);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--neon-blue);
+  }
+
+  /* FACTS SECTION */
+  .facts-section {
+    padding: 120px 40px;
+    position: relative;
+  }
+
+  .section-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.5em;
+    text-transform: uppercase;
+    color: var(--neon-purple);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .section-label::before {
+    content: '';
+    width: 40px;
+    height: 1px;
+    background: var(--neon-purple);
+    box-shadow: 0 0 8px var(--neon-purple);
+  }
+
+  .section-title {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 16px;
+  }
+
+  .gradient-text {
+    background: linear-gradient(135deg, #fff 30%, var(--neon-blue) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .facts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+    margin-top: 64px;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .fact-card {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 36px 28px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
+    transform: perspective(1000px);
+    cursor: default;
+  }
+  .fact-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--neon-blue), transparent);
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+  .fact-card:hover {
+    background: rgba(0,212,255,0.06);
+    border-color: rgba(0,212,255,0.25);
+    transform: perspective(1000px) translateY(-8px);
+    box-shadow: 0 30px 60px rgba(0,0,0,0.5), 0 0 30px rgba(0,212,255,0.1);
+  }
+  .fact-card:hover::before { opacity: 1; }
+
+  .fact-number {
+    font-size: 3.5rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+    margin-bottom: 12px;
+  }
+
+  .fact-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #fff;
+  }
+
+  .fact-desc {
+    font-size: 0.88rem;
+    color: rgba(232,244,248,0.55);
+    line-height: 1.7;
+  }
+
+  .fact-icon {
+    position: absolute;
+    top: 28px; right: 28px;
+    font-size: 1.8rem;
+    opacity: 0.4;
+  }
+
+  /* PLANETS */
+  .planets-section {
+    padding: 120px 40px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .planets-bg {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 60% 80% at 70% 50%, rgba(139,92,246,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .planets-header {
+    max-width: 1200px;
+    margin: 0 auto 64px;
+  }
+
+  .planets-row {
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 20px 0 40px;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+  }
+  .planets-row::-webkit-scrollbar { display: none; }
+
+  .planet-card {
+    flex: 0 0 320px;
+    position: relative;
+    overflow: hidden;
+    border-radius: 20px;
+    margin: 0 12px;
+    cursor: pointer;
+    transition: transform 0.4s cubic-bezier(0.4,0,0.2,1);
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  .planet-card:hover { transform: scale(1.03) translateY(-8px); }
+
+  .planet-img {
+    width: 100%;
+    height: 380px;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.6s;
+    filter: saturate(1.2) brightness(0.9);
+  }
+  .planet-card:hover .planet-img { transform: scale(1.08); }
+
+  .planet-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(2,4,8,0.95) 0%, rgba(2,4,8,0.4) 50%, transparent 100%);
+  }
+
+  .planet-info {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 28px 24px;
+  }
+
+  .planet-tag {
+    font-size: 0.65rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--neon-blue);
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .planet-name {
+    font-size: 1.6rem;
+    font-weight: 800;
+    margin-bottom: 8px;
+  }
+
+  .planet-desc {
+    font-size: 0.82rem;
+    color: rgba(232,244,248,0.6);
+    line-height: 1.6;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s;
+  }
+  .planet-card:hover .planet-desc { max-height: 80px; }
+
+  .planet-stats {
+    display: flex;
+    gap: 16px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+
+  .planet-stat {
+    font-size: 0.72rem;
+    color: rgba(232,244,248,0.4);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .planet-stat strong {
+    color: rgba(232,244,248,0.85);
+    font-size: 0.85rem;
+  }
+
+  /* BLACK HOLE SECTION */
+  .blackhole-section {
+    padding: 140px 40px;
+    position: relative;
+    overflow: hidden;
+    min-height: 90vh;
+    display: flex;
+    align-items: center;
+  }
+
+  .blackhole-bg {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 80% 80% at 60% 50%, rgba(139,92,246,0.12) 0%, rgba(244,114,182,0.05) 40%, transparent 70%);
+  }
+
+  .blackhole-img-wrap {
+    position: absolute;
+    right: -5%;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 55%;
+    max-width: 700px;
+    aspect-ratio: 1;
+  }
+
+  .blackhole-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    filter: saturate(1.5) brightness(0.9) hue-rotate(20deg);
+    animation: rotate 60s linear infinite;
+    box-shadow:
+      0 0 80px rgba(139,92,246,0.4),
+      0 0 160px rgba(244,114,182,0.2),
+      inset 0 0 80px rgba(0,0,0,0.8);
+  }
+
+  .blackhole-glow {
+    position: absolute;
+    inset: -40px;
+    border-radius: 50%;
+    background: radial-gradient(circle, transparent 30%, rgba(139,92,246,0.15) 50%, rgba(244,114,182,0.08) 70%, transparent 80%);
+    animation: pulse 4s ease-in-out infinite;
+  }
+
+  .blackhole-content {
+    position: relative;
+    z-index: 2;
+    max-width: 560px;
+  }
+
+  .blackhole-quote {
+    font-size: clamp(1.5rem, 3vw, 2.2rem);
+    font-weight: 700;
+    line-height: 1.4;
+    margin: 32px 0;
+    color: rgba(232,244,248,0.9);
+  }
+
+  .blackhole-quote em {
+    font-style: normal;
+    background: linear-gradient(135deg, var(--neon-purple), var(--neon-pink));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .blackhole-body {
+    font-size: 0.95rem;
+    color: rgba(232,244,248,0.55);
+    line-height: 1.8;
+    margin-bottom: 24px;
+  }
+
+  .data-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    border: 1px solid rgba(139,92,246,0.3);
+    border-radius: 100px;
+    font-size: 0.78rem;
+    color: rgba(139,92,246,0.9);
+    background: rgba(139,92,246,0.06);
+    margin: 6px 6px 6px 0;
+    letter-spacing: 0.05em;
+  }
+  .data-pill-dot {
+    width: 6px; height: 6px;
+    background: var(--neon-purple);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--neon-purple);
+    animation: pulse 2s infinite;
+  }
+
+  /* MISSIONS */
+  .missions-section {
+    padding: 120px 40px;
+    position: relative;
+  }
+
+  .missions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 20px;
+    max-width: 1200px;
+    margin: 64px auto 0;
+  }
+
+  .mission-card {
+    position: relative;
+    overflow: hidden;
+    border-radius: 20px;
+    border: 1px solid var(--glass-border);
+    background: var(--glass);
+    transition: all 0.4s;
+    group: true;
+  }
+  .mission-card:hover {
+    border-color: rgba(0,212,255,0.2);
+    box-shadow: 0 0 40px rgba(0,212,255,0.08);
+  }
+
+  .mission-img {
+    width: 100%;
+    height: 220px;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.6s;
+    filter: brightness(0.75) saturate(1.2);
+  }
+  .mission-card:hover .mission-img { transform: scale(1.05); }
+
+  .mission-body {
+    padding: 28px;
+    position: relative;
+  }
+
+  .mission-year {
+    position: absolute;
+    top: -18px;
+    right: 24px;
+    background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+    padding: 6px 16px;
+    border-radius: 100px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--deep-space);
+  }
+
+  .mission-agency {
+    font-size: 0.65rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--neon-blue);
+    margin-bottom: 8px;
+  }
+
+  .mission-name {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+
+  .mission-text {
+    font-size: 0.85rem;
+    color: rgba(232,244,248,0.55);
+    line-height: 1.7;
+  }
+
+  .mission-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 16px;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  .status-active { background: #22c55e; box-shadow: 0 0 8px #22c55e; color: #22c55e; }
+  .status-completed { background: #94a3b8; box-shadow: 0 0 8px #94a3b8; color: #94a3b8; }
+  .status-planned { background: var(--neon-pink); box-shadow: 0 0 8px var(--neon-pink); color: var(--neon-pink); }
+
+  /* === UNIQUE FEATURE: INTERACTIVE SPACE TELESCOPE === */
+  .telescope-section {
+    padding: 120px 40px;
+    position: relative;
+    overflow: hidden;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .telescope-bg {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 100% 80% at 50% 50%, rgba(0,212,255,0.04) 0%, transparent 70%);
+  }
+
+  .telescope-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 900px;
+    text-align: center;
+  }
+
+  .telescope-title {
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    font-weight: 800;
+    margin-bottom: 16px;
+  }
+
+  .telescope-subtitle {
+    color: rgba(232,244,248,0.5);
+    margin-bottom: 48px;
+    font-size: 0.95rem;
+    line-height: 1.7;
+  }
+
+  /* TELESCOPE LENS VIEWER */
+  .lens-container {
+    position: relative;
+    width: min(600px, 90vw);
+    aspect-ratio: 1;
+    margin: 0 auto;
+    cursor: crosshair;
+  }
+
+  .lens-outer {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid rgba(0,212,255,0.3);
+    box-shadow:
+      0 0 0 8px rgba(0,212,255,0.04),
+      0 0 0 16px rgba(0,212,255,0.02),
+      0 0 60px rgba(0,212,255,0.15);
+    overflow: hidden;
+    transition: border-color 0.3s;
+  }
+
+  .lens-universe {
+    position: absolute;
+    inset: -100%;
+    background-image: url('https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?w=1200&q=80');
+    background-size: 150%;
+    background-position: center;
+    transition: background-position 0.05s;
+    filter: saturate(1.5) brightness(1.1);
+  }
+
+  .lens-overlay {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle, transparent 40%, rgba(2,4,8,0.7) 70%, rgba(2,4,8,0.95) 100%);
+  }
+
+  .lens-crosshair {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .lens-crosshair::before,
+  .lens-crosshair::after {
+    content: '';
+    position: absolute;
+    background: rgba(0,212,255,0.25);
+  }
+  .lens-crosshair::before {
+    left: 50%; top: 10%; bottom: 10%;
+    width: 1px;
+    transform: translateX(-50%);
+  }
+  .lens-crosshair::after {
+    top: 50%; left: 10%; right: 10%;
+    height: 1px;
+    transform: translateY(-50%);
+  }
+
+  .lens-rings {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  .lens-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid rgba(0,212,255,0.1);
+  }
+  .lens-ring:nth-child(1) { inset: 15%; }
+  .lens-ring:nth-child(2) { inset: 30%; }
+  .lens-ring:nth-child(3) { inset: 45%; }
+
+  .lens-coords {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    color: rgba(0,212,255,0.6);
+    font-family: monospace;
+    white-space: nowrap;
+  }
+
+  .lens-scan {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: linear-gradient(to bottom, transparent 0%, rgba(0,212,255,0.06) 50%, transparent 100%);
+    animation: scan 3s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  .found-object {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    border: 1px solid var(--neon-pink);
+    border-radius: 4px;
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, -50%);
+    transition: opacity 0.3s;
+  }
+  .found-object.visible { opacity: 1; }
+  .found-object::before,
+  .found-object::after {
+    content: '';
+    position: absolute;
+    background: var(--neon-pink);
+  }
+  .found-object::before {
+    top: -5px; left: 10px; right: 10px;
+    height: 1px;
+  }
+  .found-object::after {
+    left: -5px; top: 10px; bottom: 10px;
+    width: 1px;
+  }
+
+  .telescope-info {
+    margin-top: 32px;
+    padding: 20px 28px;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: left;
+    transition: all 0.4s;
+  }
+  .telescope-info-icon {
+    font-size: 2rem;
+    flex-shrink: 0;
+  }
+  .telescope-info-text {
+    font-size: 0.85rem;
+    color: rgba(232,244,248,0.6);
+    line-height: 1.6;
+  }
+  .telescope-info-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--neon-pink);
+    margin-bottom: 4px;
+  }
+
+  /* GALAXY SECTION */
+  .galaxy-section {
+    padding: 120px 40px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .galaxy-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    align-items: center;
+  }
+
+  .galaxy-img-wrap {
+    position: relative;
+  }
+
+  .galaxy-img {
+    width: 100%;
+    border-radius: 20px;
+    object-fit: cover;
+    height: 500px;
+    filter: saturate(1.3) brightness(0.9);
+    transition: transform 0.6s;
+  }
+  .galaxy-img-wrap:hover .galaxy-img { transform: scale(1.02); }
+
+  .galaxy-img-wrap::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 22px;
+    background: linear-gradient(135deg, rgba(0,212,255,0.3), rgba(139,92,246,0.3), rgba(244,114,182,0.2));
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+  .galaxy-img-wrap:hover::after { opacity: 1; }
+
+  .galaxy-text h3 {
+    font-size: clamp(1.5rem, 3vw, 2.5rem);
+    font-weight: 800;
+    margin: 20px 0 24px;
+    line-height: 1.2;
+  }
+
+  .galaxy-text p {
+    font-size: 0.95rem;
+    color: rgba(232,244,248,0.6);
+    line-height: 1.8;
+    margin-bottom: 20px;
+  }
+
+  .galaxy-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 36px;
+  }
+
+  .galaxy-stat {
+    padding: 20px;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    transition: all 0.3s;
+  }
+  .galaxy-stat:hover {
+    background: rgba(0,212,255,0.05);
+    border-color: rgba(0,212,255,0.2);
+  }
+
+  .galaxy-stat-val {
+    font-size: 1.8rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .galaxy-stat-label {
+    font-size: 0.78rem;
+    color: rgba(232,244,248,0.45);
+    line-height: 1.4;
+  }
+
+  /* FINAL SECTION */
+  .final-section {
+    padding: 160px 40px;
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .final-bg {
+    position: absolute;
+    inset: 0;
+    background-image: url('https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=1800&q=80');
+    background-size: cover;
+    background-position: center;
+    opacity: 0.15;
+    filter: blur(4px);
+  }
+
+  .final-glow {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 50%, rgba(139,92,246,0.2) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 40% at 30% 20%, rgba(0,212,255,0.1) 0%, transparent 50%),
+      radial-gradient(ellipse 30% 30% at 70% 80%, rgba(244,114,182,0.1) 0%, transparent 50%);
+  }
+
+  .final-content {
+    position: relative;
+    z-index: 2;
+    max-width: 800px;
+  }
+
+  .final-number {
+    font-size: clamp(5rem, 15vw, 12rem);
+    font-weight: 900;
+    line-height: 1;
+    background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(0,212,255,0.15) 50%, rgba(139,92,246,0.1) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -0.05em;
+    position: relative;
+    display: block;
+    margin-bottom: 24px;
+  }
+  .final-number span {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(0,212,255,0.5), rgba(139,92,246,0.5));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: blur(20px);
+    opacity: 0.5;
+  }
+
+  .final-title {
+    font-size: clamp(1.8rem, 4vw, 3.5rem);
+    font-weight: 800;
+    line-height: 1.2;
+    margin-bottom: 24px;
+  }
+
+  .final-subtitle {
+    font-size: 1.1rem;
+    color: rgba(232,244,248,0.55);
+    line-height: 1.8;
+    margin-bottom: 48px;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .final-cta-group {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary {
+    padding: 16px 40px;
+    background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.4s;
+    box-shadow: 0 0 30px rgba(0,212,255,0.3);
+    text-decoration: none;
+    display: inline-block;
+    font-weight: 600;
+  }
+  .btn-primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 40px rgba(0,212,255,0.4);
+  }
+
+  .btn-outline {
+    padding: 16px 40px;
+    border: 1px solid rgba(232,244,248,0.2);
+    color: rgba(232,244,248,0.7);
+    border-radius: 4px;
+    font-size: 0.85rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.4s;
+    text-decoration: none;
+    display: inline-block;
+    font-weight: 600;
+    background: transparent;
+  }
+  .btn-outline:hover {
+    border-color: rgba(232,244,248,0.5);
+    color: #fff;
+    transform: translateY(-3px);
+  }
+
+  /* FOOTER */
+  footer {
+    padding: 40px;
+    border-top: 1px solid var(--glass-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+
+  .footer-logo {
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 0.4em;
+    color: var(--neon-blue);
+    text-shadow: 0 0 15px var(--neon-blue);
+    text-transform: uppercase;
+  }
+
+  .footer-copy {
+    font-size: 0.75rem;
+    color: rgba(232,244,248,0.3);
+    letter-spacing: 0.1em;
+  }
+
+  .footer-links {
+    display: flex;
+    gap: 24px;
+  }
+  .footer-links a {
+    font-size: 0.75rem;
+    color: rgba(232,244,248,0.4);
+    text-decoration: none;
+    letter-spacing: 0.1em;
+    transition: color 0.3s;
+  }
+  .footer-links a:hover { color: var(--neon-blue); }
+
+  /* ANIMATIONS */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes scrollAnim {
+    0%, 100% { transform: scaleY(1); opacity: 1; }
+    50% { transform: scaleY(0.5); opacity: 0.4; }
+  }
+
+  @keyframes ticker {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  @keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(0.95); }
+  }
+
+  @keyframes scan {
+    0% { transform: translateY(-100%); }
+    100% { transform: translateY(100%); }
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% center; }
+    100% { background-position: 200% center; }
+  }
+
+  /* REVEAL ANIMATIONS */
+  .reveal {
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.8s cubic-bezier(0.4,0,0.2,1), transform 0.8s cubic-bezier(0.4,0,0.2,1);
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .reveal-left {
+    opacity: 0;
+    transform: translateX(-40px);
+    transition: opacity 0.8s cubic-bezier(0.4,0,0.2,1), transform 0.8s cubic-bezier(0.4,0,0.2,1);
+  }
+  .reveal-left.visible {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  .reveal-right {
+    opacity: 0;
+    transform: translateX(40px);
+    transition: opacity 0.8s cubic-bezier(0.4,0,0.2,1), transform 0.8s cubic-bezier(0.4,0,0.2,1);
+  }
+  .reveal-right.visible {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .delay-1 { transition-delay: 0.1s; }
+  .delay-2 { transition-delay: 0.2s; }
+  .delay-3 { transition-delay: 0.3s; }
+  .delay-4 { transition-delay: 0.4s; }
+  .delay-5 { transition-delay: 0.5s; }
+  .delay-6 { transition-delay: 0.6s; }
+
+  /* MOBILE */
+  @media (max-width: 768px) {
+    nav { padding: 16px 20px; }
+    nav.scrolled { padding: 12px 20px; }
+    .nav-links { display: none; }
+    .facts-section, .planets-section, .missions-section,
+    .blackhole-section, .telescope-section, .galaxy-section, .final-section {
+      padding: 80px 20px;
+    }
+    .blackhole-img-wrap {
+      position: relative;
+      right: auto; top: auto;
+      transform: none;
+      width: 100%;
+      max-width: 100%;
+      aspect-ratio: 1;
+      margin-bottom: 40px;
+      border-radius: 20px;
+      overflow: hidden;
+    }
+    .blackhole-img { border-radius: 0; animation: none; }
+    .blackhole-section {
+      flex-direction: column;
+    }
+    .galaxy-content {
+      grid-template-columns: 1fr;
+      gap: 40px;
+    }
+    .galaxy-img { height: 280px; }
+    footer { flex-direction: column; text-align: center; }
+    .footer-links { justify-content: center; }
+    .hero-cta { width: 100%; justify-content: center; }
+  }
+
+  /* NEON LINE DECORATION */
+  .neon-line {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--neon-blue), transparent);
+    margin: 0;
+    opacity: 0.4;
+  }
+
+  /* FLOATING ELEMENTS */
+  .float-tag {
+    position: absolute;
+    padding: 6px 14px;
+    border: 1px solid rgba(0,212,255,0.25);
+    border-radius: 100px;
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    color: rgba(0,212,255,0.7);
+    backdrop-filter: blur(10px);
+    background: rgba(0,212,255,0.04);
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  /* COUNT-UP NUMBERS */
+  .count-up {
+    display: inline-block;
+  }
+</style>
+</head>
+<body>
+
+<!-- CURSOR -->
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- PROGRESS BAR -->
+<div class="progress-bar" id="progressBar"></div>
+
+<!-- STAR CANVAS -->
+<canvas id="starCanvas"></canvas>
+
+<!-- NAV -->
+<nav id="navbar">
+  <div class="nav-logo">COSMOS</div>
+  <ul class="nav-links">
+    <li><a href="#facts">Факты</a></li>
+    <li><a href="#planets">Планеты</a></li>
+    <li><a href="#blackhole">Черные дыры</a></li>
+    <li><a href="#telescope">Телескоп</a></li>
+    <li><a href="#missions">Миссии</a></li>
+    <li><a href="#galaxy">Галактики</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-nebula" id="heroBg"></div>
+
+  <div class="hero-content">
+    <p class="hero-eyebrow">Исследование вселенной · 2025</p>
+    <h1 class="hero-title">ЗА<br>ГОРИЗОН-<br>ТОМ</h1>
+    <p class="hero-subtitle">
+      Вселенная простирается на 93 миллиарда световых лет. Каждая звезда — потенциальное солнце. Каждая планета — возможный дом. Мы только начинаем смотреть.
+    </p>
+    <a href="#facts" class="hero-cta">
+      Начать путешествие
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </a>
+  </div>
+
+  <div class="hero-scroll">
+    <div class="scroll-line"></div>
+    <span>Scroll</span>
+  </div>
+</section>
+
+<!-- TICKER -->
+<div class="ticker-wrap">
+  <div class="ticker">
+    <div class="ticker-item"><div class="ticker-dot"></div> Возраст Вселенной: 13.8 миллиарда лет</div>
+    <div class="ticker-item"><div class="ticker-dot"></div> Диаметр наблюдаемой Вселенной: 93 млрд световых лет</div>
+    <div class="ticker-item"><div class="ticker-dot"></div> Скорость света: 299 792 км/с</div>
+    <div class="ticker-item"><div class="ticker-dot"></div> Галактик во Вселенной: более 2 триллионов</div>
+    <div class="ticker-item"><div class="ticker-dot"></div> Температура в открытом космосе: −270.45°C</div>
+    <div class="ticker-item"><div class="ticker-dot"></div> Самая далекая галактика: GN-z11 — 13.4 млрд св. лет</div>
+    <div class="ticker-item"><div class="ticker-dot"></div> Возраст Вселенной: 13.8 миллиарда лет</div>
+    <div class="ticker-item"><div class="ticker-dot"></div> Диаметр наблюдаемой Вселенной: 93 млрд световых лет</div>
+    <div class="ticker-item"><div class="ticker-dot"></div> Скорость света: 299 792 км/с</div>
+    <div class="ticker-item"><div class="ticker-dot"></div> Галактик во Вселенной: более 2 триллионов</div>
+    <div class="ticker-item"><div class="ticker-dot"></div> Температура в открытом космосе: −270.45°C</div>
+    <div class="ticker-item"><div class="ticker-dot"></div> Самая далекая галактика: GN-z11 — 13.4 млрд св. лет</div>
+  </div>
+</div>
+
+<!-- FACTS -->
+<section class="facts-section" id="facts">
+  <div style="max-width:1200px;margin:0 auto;">
+    <div class="section-label reveal">Поразительные факты</div>
+    <h2 class="section-title reveal delay-1"><span class="gradient-text">Числа, которые</span><br>не вмещает разум</h2>
+    <div class="facts-grid">
+      <div class="fact-card reveal delay-1">
+        <div class="fact-icon">⭐</div>
+        <div class="fact-number"><span class="count-up" data-target="200">0</span>млрд</div>
+        <div class="fact-title">Звёзд в Млечном Пути</div>
+        <div class="fact-desc">Только в нашей галактике насчитывается от 100 до 400 миллиардов звёзд. Среди них могут существовать миллиарды планет, пригодных для жизни.</div>
+      </div>
+      <div class="fact-card reveal delay-2">
+        <div class="fact-icon">🕳️</div>
+        <div class="fact-number">4млн М☉</div>
+        <div class="fact-title">Масса Стрельца A*</div>
+        <div class="fact-desc">Сверхмассивная чёрная дыра в центре нашей галактики в 4 миллиона раз тяжелее Солнца. Первое её изображение получено в 2022 году.</div>
+      </div>
+      <div class="fact-card reveal delay-3">
+        <div class="fact-icon">🌌</div>
+        <div class="fact-number">2трлн</div>
+        <div class="fact-title">Галактик в Вселенной</div>
+        <div class="fact-desc">Последние данные телескопа Джеймс Уэбб пересмотрели оценку: галактик во Вселенной в 10 раз больше, чем думали ранее.</div>
+      </div>
+      <div class="fact-card reveal delay-4">
+        <div class="fact-icon">💫</div>
+        <div class="fact-number">96%</div>
+        <div class="fact-title">Тёмная материя и энергия</div>
+        <div class="fact-desc">Всё, что мы можем видеть, потрогать и измерить, составляет лишь 4% от всего содержимого Вселенной. Остальное — полная загадка.</div>
+      </div>
+      <div class="fact-card reveal delay-5">
+        <div class="fact-icon">🚀</div>
+        <div class="fact-number">40лет</div>
+        <div class="fact-title">Voyager 1 в пути</div>
+        <div class="fact-desc">Зонд запущен в 1977 году и всё ещё летит. Сейчас он находится в 24 миллиардах километров от Земли — в межзвёздном пространстве.</div>
+      </div>
+      <div class="fact-card reveal delay-6">
+        <div class="fact-icon">🪐</div>
+        <div class="fact-number">5500+</div>
+        <div class="fact-title">Экзопланет открыто</div>
+        <div class="fact-desc">С 1992 года подтверждено более 5 500 планет за пределами Солнечной системы. Поиск второй Земли идёт прямо сейчас.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="neon-line"></div>
+
+<!-- PLANETS -->
+<section class="planets-section" id="planets">
+  <div class="planets-bg"></div>
+  <div class="planets-header" style="max-width:1200px;margin:0 auto 40px;">
+    <div class="section-label reveal">Солнечная система</div>
+    <h2 class="section-title reveal delay-1"><span class="gradient-text">Миры</span> нашего<br>звёздного дома</h2>
+    <p style="color:rgba(232,244,248,0.5);font-size:0.9rem;margin-top:12px;line-height:1.7;" class="reveal delay-2">
+      Восемь планет. Сотни лун. Миллиарды малых тел. И только на одной из них — жизнь.
+    </p>
+  </div>
+
+  <div class="planets-row reveal">
+    <div class="planet-card">
+      <img class="planet-img" src="https://images.unsplash.com/photo-1614732414444-096e5f1122d5?w=600&q=80" alt="Марс">
+      <div class="planet-overlay"></div>
+      <div class="planet-info">
+        <span class="planet-tag">Планета · IV</span>
+        <div class="planet-name">Марс</div>
+        <div class="planet-desc">Красная планета — главная цель для колонизации. Разреженная атмосфера, гигантские вулканы и сухие русла рек говорят о древнем прошлом.</div>
+        <div class="planet-stats">
+          <div class="planet-stat"><span>Расстояние</span><strong>227 млн км</strong></div>
+          <div class="planet-stat"><span>Период</span><strong>687 дней</strong></div>
+          <div class="planet-stat"><span>Луны</span><strong>2</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="planet-card">
+      <img class="planet-img" src="https://images.unsplash.com/photo-1614314107768-6018061b5b72?w=600&q=80" alt="Сатурн">
+      <div class="planet-overlay"></div>
+      <div class="planet-info">
+        <span class="planet-tag">Планета · VI</span>
+        <div class="planet-name">Сатурн</div>
+        <div class="planet-desc">Повелитель колец. Плотность Сатурна настолько мала, что он мог бы плавать в воде. Его кольца простираются на 282 000 км.</div>
+        <div class="planet-stats">
+          <div class="planet-stat"><span>Расстояние</span><strong>1.4 млрд км</strong></div>
+          <div class="planet-stat"><span>Период</span><strong>29.5 лет</strong></div>
+          <div class="planet-stat"><span>Луны</span><strong>146</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="planet-card">
+      <img class="planet-img" src="https://images.unsplash.com/photo-1614728894747-a83421e2b9c9?w=600&q=80" alt="Земля">
+      <div class="planet-overlay"></div>
+      <div class="planet-info">
+        <span class="planet-tag">Планета · III</span>
+        <div class="planet-name">Земля</div>
+        <div class="planet-desc">Единственный известный мир с жизнью. Голубая точка, подвешенная в лучах солнца. Хрупкая, уникальная и требующая защиты.</div>
+        <div class="planet-stats">
+          <div class="planet-stat"><span>Расстояние</span><strong>149.6 млн км</strong></div>
+          <div class="planet-stat"><span>Период</span><strong>365 дней</strong></div>
+          <div class="planet-stat"><span>Луны</span><strong>1</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="planet-card">
+      <img class="planet-img" src="https://images.unsplash.com/photo-1614313913007-2b4ae8ce32d6?w=600&q=80" alt="Юпитер">
+      <div class="planet-overlay"></div>
+      <div class="planet-info">
+        <span class="planet-tag">Планета · V</span>
+        <div class="planet-name">Юпитер</div>
+        <div class="planet-desc">Газовый гигант, который больше всех остальных планет вместе взятых. Большое красное пятно — антициклон, бушующий 350 лет.</div>
+        <div class="planet-stats">
+          <div class="planet-stat"><span>Расстояние</span><strong>778 млн км</strong></div>
+          <div class="planet-stat"><span>Период</span><strong>12 лет</strong></div>
+          <div class="planet-stat"><span>Луны</span><strong>95</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="planet-card">
+      <img class="planet-img" src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Uranus.jpg/600px-Uranus.jpg" alt="Уран">
+      <div class="planet-overlay"></div>
+      <div class="planet-info">
+        <span class="planet-tag">Планета · VII</span>
+        <div class="planet-name">Уран</div>
+        <div class="planet-desc">Ледяной гигант, вращающийся «на боку». Угол наклона оси — 97.8°. Его бирюзовый цвет создаёт метан в атмосфере.</div>
+        <div class="planet-stats">
+          <div class="planet-stat"><span>Расстояние</span><strong>2.87 млрд км</strong></div>
+          <div class="planet-stat"><span>Период</span><strong>84 года</strong></div>
+          <div class="planet-stat"><span>Луны</span><strong>28</strong></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BLACK HOLE -->
+<section class="blackhole-section" id="blackhole">
+  <div class="blackhole-bg"></div>
+
+  <div class="blackhole-img-wrap" id="blackholeVisual">
+    <div class="blackhole-glow"></div>
+    <img class="blackhole-img"
+      src="https://images.unsplash.com/photo-1629654297299-c8506221ca97?w=800&q=80"
+      alt="Чёрная дыра">
+  </div>
+
+  <div class="blackhole-content">
+    <div class="section-label reveal-left">Загадки Вселенной</div>
+    <div class="blackhole-quote reveal-left delay-1">
+      Место, где <em>время останавливается</em>, а пространство теряет смысл
+    </div>
+    <p class="blackhole-body reveal-left delay-2">
+      Чёрные дыры — это не просто объекты: это разрывы в ткани реальности. За горизонтом событий законы физики прекращают работать так, как мы их знаем. Даже свет не может вырваться наружу.
+    </p>
+    <p class="blackhole-body reveal-left delay-3">
+      В 2019 году человечество впервые увидело тень чёрной дыры в галактике M87. В 2022-м — Стрелец A*, дыру в сердце нашего Млечного Пути. Оба изображения перевернули наше понимание гравитации.
+    </p>
+    <div class="reveal-left delay-4">
+      <div class="data-pill"><div class="data-pill-dot"></div> Горизонт событий M87*: 38 млрд км</div>
+      <div class="data-pill"><div class="data-pill-dot"></div> Масса: 6.5 млрд солнечных масс</div>
+      <div class="data-pill"><div class="data-pill-dot"></div> Расстояние: 55 млн световых лет</div>
+      <div class="data-pill"><div class="data-pill-dot"></div> Температура Хокинга: ~10⁻¹⁷ K</div>
+    </div>
+  </div>
+</section>
+
+<div class="neon-line"></div>
+
+<!-- === UNIQUE FEATURE: SPACE TELESCOPE VIEWER === -->
+<section class="telescope-section" id="telescope">
+  <div class="telescope-bg"></div>
+  <div class="telescope-wrap">
+    <div class="section-label reveal" style="justify-content:center;">Интерактивный объектив</div>
+    <h2 class="telescope-title reveal delay-1"><span class="gradient-text">Заглянуть</span> в телескоп</h2>
+    <p class="telescope-subtitle reveal delay-2">
+      Двигай мышь внутри объектива — и перемещайся по глубинам Вселенной. Исследуй звёздные поля, как это делают астрономы телескопа Джеймс Уэбб.
+    </p>
+
+    <div class="lens-container reveal delay-3" id="lensContainer">
+      <div class="lens-outer" id="lensOuter">
+        <div class="lens-universe" id="lensUniverse"></div>
+        <div class="lens-overlay"></div>
+        <div class="lens-scan"></div>
+        <div class="lens-crosshair"></div>
+        <div class="lens-rings">
+          <div class="lens-ring"></div>
+          <div class="lens-ring"></div>
+          <div class="lens-ring"></div>
+        </div>
+        <div class="found-object" id="foundObject"></div>
+        <div class="lens-coords" id="lensCoords">RA 05h 34m 32s · DEC +22° 00′ 52″</div>
+      </div>
+    </div>
+
+    <div class="telescope-info reveal delay-4" id="telescopeInfo">
+      <div class="telescope-info-icon">🌟</div>
+      <div class="telescope-info-text">
+        <div class="telescope-info-label" id="infoLabel">Объект обнаружен</div>
+        <div id="infoText">Наведи объектив на область неба, чтобы получить данные об объекте. Телескоп автоматически анализирует спектр излучения.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MISSIONS -->
+<section class="missions-section" id="missions">
+  <div style="max-width:1200px;margin:0 auto;">
+    <div class="section-label reveal">Космические программы</div>
+    <h2 class="section-title reveal delay-1"><span class="gradient-text">Миссии,</span><br>меняющие историю</h2>
+
+    <div class="missions-grid">
+      <div class="mission-card reveal delay-1">
+        <img class="mission-img" src="https://images.unsplash.com/photo-1532667449560-72a95c8d381b?w=700&q=80" alt="James Webb">
+        <div class="mission-body">
+          <div class="mission-year">2021</div>
+          <div class="mission-agency">NASA / ESA / CSA</div>
+          <div class="mission-name">Телескоп Джеймс Уэбб</div>
+          <div class="mission-text">Самый мощный космический телескоп в истории видит в инфракрасном диапазоне, проникая сквозь туманности и наблюдая первые галактики, возникшие через 300 млн лет после Большого Взрыва.</div>
+          <div class="mission-status"><div class="status-dot status-active"></div><span style="color:#22c55e">Активна</span></div>
+        </div>
+      </div>
+
+      <div class="mission-card reveal delay-2">
+        <img class="mission-img" src="https://images.unsplash.com/photo-1517976487492-5750f3195933?w=700&q=80" alt="Artemis">
+        <div class="mission-body">
+          <div class="mission-year">2025+</div>
+          <div class="mission-agency">NASA</div>
+          <div class="mission-name">Программа Artemis</div>
+          <div class="mission-text">Возвращение человека на Луну. Впервые за полвека астронавты ступят на лунную поверхность — и на этот раз останутся, чтобы построить базу у южного полюса.</div>
+          <div class="mission-status"><div class="status-dot status-planned"></div><span style="color:var(--neon-pink)">В разработке</span></div>
+        </div>
+      </div>
+
+      <div class="mission-card reveal delay-3">
+        <img class="mission-img" src="https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=700&q=80" alt="Voyager">
+        <div class="mission-body">
+          <div class="mission-year">1977</div>
+          <div class="mission-agency">NASA / JPL</div>
+          <div class="mission-name">Voyager 1 & 2</div>
+          <div class="mission-text">Запущенные почти 50 лет назад, оба зонда до сих пор на связи. Voyager 1 стал первым рукотворным объектом, покинувшим Солнечную систему и вошедшим в межзвёздное пространство.</div>
+          <div class="mission-status"><div class="status-dot status-active"></div><span style="color:#22c55e">Активна</span></div>
+        </div>
+      </div>
+
+      <div class="mission-card reveal delay-4">
+        <img class="mission-img" src="https://images.unsplash.com/photo-1454789548928-9efd52dc4031?w=700&q=80" alt="Mars">
+        <div class="mission-body">
+          <div class="mission-year">2020</div>
+          <div class="mission-agency">NASA / JPL</div>
+          <div class="mission-name">Марсоход Perseverance</div>
+          <div class="mission-text">Самый технологичный марсоход когда-либо отправленный на другую планету. Впервые произвёл кислород на Марсе и запустил первый внепланетный вертолёт Ingenuity.</div>
+          <div class="mission-status"><div class="status-dot status-active"></div><span style="color:#22c55e">Активна</span></div>
+        </div>
+      </div>
+
+      <div class="mission-card reveal delay-5">
+        <img class="mission-img" src="https://images.unsplash.com/photo-1581822261290-991b38693d1b?w=700&q=80" alt="Starship">
+        <div class="mission-body">
+          <div class="mission-year">2024+</div>
+          <div class="mission-agency">SpaceX</div>
+          <div class="mission-name">Starship</div>
+          <div class="mission-text">Полностью многоразовая сверхтяжёлая ракета. Первая в истории поймала ракету-носитель обратно на старт. Может стать инструментом для колонизации Марса.</div>
+          <div class="mission-status"><div class="status-dot status-planned"></div><span style="color:var(--neon-pink)">В разработке</span></div>
+        </div>
+      </div>
+
+      <div class="mission-card reveal delay-6">
+        <img class="mission-img" src="https://images.unsplash.com/photo-1614642264762-d0a3b8bf3700?w=700&q=80" alt="Europa">
+        <div class="mission-body">
+          <div class="mission-year">2024</div>
+          <div class="mission-agency">NASA</div>
+          <div class="mission-name">Europa Clipper</div>
+          <div class="mission-text">Миссия к Европе — ледяной луне Юпитера. Под её поверхностью скрывается солёный океан, в котором, возможно, существует жизнь. Прибытие — в 2030 году.</div>
+          <div class="mission-status"><div class="status-dot status-active"></div><span style="color:#22c55e">В пути</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- GALAXY -->
+<section class="galaxy-section" id="galaxy">
+  <div style="max-width:1200px;margin:0 auto;">
+    <div class="galaxy-content">
+      <div class="galaxy-img-wrap reveal-left">
+        <img class="galaxy-img"
+          src="https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?w=900&q=80"
+          alt="Галактика">
+      </div>
+      <div class="galaxy-text">
+        <div class="section-label reveal-right">Масштаб бытия</div>
+        <h3 class="reveal-right delay-1">Млечный Путь — <span class="gradient-text">наш космический адрес</span></h3>
+        <p class="reveal-right delay-2">Мы живём в спиральной галактике диаметром около 100 000 световых лет. Солнечная система расположена в рукаве Ориона, примерно в 26 000 световых лет от центра.</p>
+        <p class="reveal-right delay-3">Галактика вращается: наше Солнце совершает полный оборот вокруг центра примерно за 225 миллионов лет. За всё время существования Земли это произошло лишь около 20 раз. Этот период называют галактическим годом.</p>
+        <p class="reveal-right delay-4">Через 4.5 миллиарда лет Млечный Путь столкнётся с туманностью Андромеды. Но не бойтесь — из-за огромного расстояния между звёздами, большинство систем просто пройдут сквозь друг друга.</p>
+        <div class="galaxy-stats reveal-right delay-5">
+          <div class="galaxy-stat">
+            <div class="galaxy-stat-val">100k</div>
+            <div class="galaxy-stat-label">световых лет в диаметре</div>
+          </div>
+          <div class="galaxy-stat">
+            <div class="galaxy-stat-val">400млрд</div>
+            <div class="galaxy-stat-label">звёзд в галактике</div>
+          </div>
+          <div class="galaxy-stat">
+            <div class="galaxy-stat-val">4.5 млрд</div>
+            <div class="galaxy-stat-label">лет — до столкновения с Андромедой</div>
+          </div>
+          <div class="galaxy-stat">
+            <div class="galaxy-stat-val">225 млн</div>
+            <div class="galaxy-stat-label">лет — галактический год</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="neon-line"></div>
+
+<!-- FINAL -->
+<section class="final-section" id="final">
+  <div class="final-bg" id="finalBg"></div>
+  <div class="final-glow"></div>
+  <div class="final-content">
+    <div class="section-label reveal" style="justify-content:center;margin-bottom:24px;">Перспектива</div>
+    <div class="final-number reveal">
+      <span></span>∞
+    </div>
+    <h2 class="final-title reveal delay-1">
+      Вселенная не имеет<br><span class="gradient-text">смысла без наблюдателя</span>
+    </h2>
+    <p class="final-subtitle reveal delay-2">
+      Мы — дети звёзд. Каждый атом в нашем теле был рождён в ядре умирающей звезды миллиарды лет назад. Задавая вопросы о Вселенной, мы смотрим на самих себя.
+    </p>
+    <div class="final-cta-group reveal delay-3">
+      <a href="#hero" class="btn-primary">Начать сначала</a>
+      <a href="#facts" class="btn-outline">Изучить факты</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">COSMOS</div>
+  <div class="footer-copy">© 2025 — За пределами известного</div>
+  <div class="footer-links">
+    <a href="#facts">Факты</a>
+    <a href="#planets">Планеты</a>
+    <a href="#missions">Миссии</a>
+    <a href="#galaxy">Галактики</a>
+  </div>
+</footer>
+
+<script>
+(function() {
+  // =====================
+  // CUSTOM CURSOR
+  // =====================
+  const cursor = document.getElementById('cursor');
+  const ring = document.getElementById('cursorRing');
+  let mouseX = 0, mouseY = 0, ringX = 0, ringY = 0;
+
+  document.addEventListener('mousemove', (e) => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+    cursor.style.left = mouseX + 'px';
+    cursor.style.top = mouseY + 'px';
+  });
+
+  function animateRing() {
+    ringX += (mouseX - ringX) * 0.12;
+    ringY += (mouseY - ringY) * 0.12;
+    ring.style.left = ringX + 'px';
+    ring.style.top = ringY + 'px';
+    requestAnimationFrame(animateRing);
+  }
+  animateRing();
+
+  document.querySelectorAll('a, button, .fact-card, .planet-card, .mission-card, .galaxy-stat, .lens-container').forEach(el => {
+    el.addEventListener('mouseenter', () => { cursor.classList.add('hover'); ring.classList.add('hover'); });
+    el.addEventListener('mouseleave', () => { cursor.classList.remove('hover'); ring.classList.remove('hover'); });
+  });
+
+  // =====================
+  // STAR CANVAS
+  // =====================
+  const canvas = document.getElementById('starCanvas');
+  const ctx = canvas.getContext('2d');
+  let stars = [];
+  let shootingStars = [];
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function createStars() {
+    stars = [];
+    const count = Math.floor((W * H) / 3000);
+    for (let i = 0; i < count; i++) {
+      stars.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        r: Math.random() * 1.5 + 0.2,
+        a: Math.random(),
+        speed: Math.random() * 0.003 + 0.001,
+        twinkle: Math.random() * Math.PI * 2,
+        color: Math.random() > 0.9 ? '#b0d4ff' : Math.random() > 0.95 ? '#ffeecc' : '#e8f4f8'
+      });
+    }
+  }
+  createStars();
+
+  let scrollY = 0;
+  window.addEventListener('scroll', () => { scrollY = window.scrollY; });
+
+  function spawnShootingStar() {
+    if (Math.random() < 0.003) {
+      shootingStars.push({
+        x: Math.random() * W,
+        y: Math.random() * H * 0.5,
+        len: Math.random() * 150 + 80,
+        speed: Math.random() * 8 + 6,
+        angle: Math.PI / 4 + (Math.random() - 0.5) * 0.3,
+        life: 1,
+        decay: Math.random() * 0.02 + 0.015
+      });
+    }
+  }
+
+  function animateStars() {
+    ctx.clearRect(0, 0, W, H);
+    const parallaxOffset = scrollY * 0.15;
+
+    stars.forEach(s => {
+      s.twinkle += s.speed;
+      const opacity = s.a * (0.6 + 0.4 * Math.sin(s.twinkle));
+      ctx.beginPath();
+      ctx.arc(s.x, (s.y - parallaxOffset * 0.3 + H * 10) % H, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = s.color;
+      ctx.globalAlpha = opacity;
+      ctx.fill();
+    });
+
+    spawnShootingStar();
+    shootingStars = shootingStars.filter(s => s.life > 0);
+    shootingStars.forEach(s => {
+      ctx.save();
+      ctx.globalAlpha = s.life * 0.8;
+      const grad = ctx.createLinearGradient(s.x, s.y, s.x - Math.cos(s.angle) * s.len, s.y - Math.sin(s.angle) * s.len);
+      grad.addColorStop(0, 'rgba(255,255,255,0.9)');
+      grad.addColorStop(1, 'rgba(0,212,255,0)');
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(s.x, s.y);
+      ctx.lineTo(s.x - Math.cos(s.angle) * s.len, s.y - Math.sin(s.angle) * s.len);
+      ctx.stroke();
+      ctx.restore();
+      s.x += Math.cos(s.angle) * s.speed;
+      s.y += Math.sin(s.angle) * s.speed;
+      s.life -= s.decay;
+    });
+
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(animateStars);
+  }
+  animateStars();
+
+  // =====================
+  // PARALLAX
+  // =====================
+  const heroBg = document.getElementById('heroBg');
+  const finalBg = document.getElementById('finalBg');
+
+  window.addEventListener('scroll', () => {
+    const sy = window.scrollY;
+    if (heroBg) heroBg.style.transform = `translateY(${sy * 0.4}px) scale(1.05)`;
+    if (finalBg) finalBg.style.transform = `translateY(${-sy * 0.05}px)`;
+  });
+
+  // =====================
+  // NAV SCROLL
+  // =====================
+  const navbar = document.getElementById('navbar');
+  const progressBar = document.getElementById('progressBar');
+
+  window.addEventListener('scroll', () => {
+    const sy = window.scrollY;
+    if (sy > 60) navbar.classList.add('scrolled'); else navbar.classList.remove('scrolled');
+    const docH = document.documentElement.scrollHeight - window.innerHeight;
+    progressBar.style.width = (sy / docH * 100) + '%';
+  });
+
+  // =====================
+  // REVEAL ON SCROLL
+  // =====================
+  const reveals = document.querySelectorAll('.reveal, .reveal-left, .reveal-right');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.12 });
+  reveals.forEach(el => observer.observe(el));
+
+  // =====================
+  // 3D CARD TILT
+  // =====================
+  document.querySelectorAll('.fact-card').forEach(card => {
+    card.addEventListener('mousemove', (e) => {
+      const rect = card.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dx = (e.clientX - cx) / (rect.width / 2);
+      const dy = (e.clientY - cy) / (rect.height / 2);
+      card.style.transform = `perspective(1000px) rotateY(${dx * 8}deg) rotateX(${-dy * 8}deg) translateY(-8px)`;
+    });
+    card.addEventListener('mouseleave', () => {
+      card.style.transform = 'perspective(1000px) rotateY(0) rotateX(0) translateY(0)';
+    });
+  });
+
+  // =====================
+  // HERO MOUSE PARALLAX
+  // =====================
+  const heroSection = document.querySelector('.hero');
+  heroSection.addEventListener('mousemove', (e) => {
+    const rx = (e.clientX / window.innerWidth - 0.5) * 20;
+    const ry = (e.clientY / window.innerHeight - 0.5) * 20;
+    if (heroBg) heroBg.style.transform = `translate(${rx * 0.5}px, ${ry * 0.5}px) scale(1.05)`;
+  });
+
+  // =====================
+  // TELESCOPE LENS
+  // =====================
+  const lensContainer = document.getElementById('lensContainer');
+  const lensUniverse = document.getElementById('lensUniverse');
+  const lensCoords = document.getElementById('lensCoords');
+  const foundObject = document.getElementById('foundObject');
+  const infoLabel = document.getElementById('infoLabel');
+  const infoText = document.getElementById('infoText');
+  const telescopeInfo = document.getElementById('telescopeInfo');
+
+  const spaceObjects = [
+    {
+      icon: '🌟',
+      label: 'Звезда главной последовательности',
+      text: 'Спектральный класс G2V. Светимость: 1.0 L☉. Температура поверхности: 5 778 К. Возраст: ~4.6 млрд лет. Расстояние: 26 000 св. лет.'
+    },
+    {
+      icon: '🌌',
+      label: 'Туманность эмиссионного типа',
+      text: 'Облако ионизированного водорода. Диаметр: ~50 св. лет. Активная зона звёздообразования. Обнаружены сигнатуры протозвёзд класса T Тельца.'
+    },
+    {
+      icon: '🪐',
+      label: 'Экзопланета в зоне обитаемости',
+      text: 'Планета размером 1.4 земного радиуса. Период обращения: 287 дней. Температура поверхности: ~15°C. Обнаружены водяной пар и O₂ в атмосфере.'
+    },
+    {
+      icon: '💫',
+      label: 'Пульсар',
+      text: 'Нейтронная звезда с периодом 33 мс. Магнитное поле: 10¹² Гс. Диаметр: ~20 км. Масса: 1.4 M☉. Скорость вращения: 30 об/с.'
+    },
+    {
+      icon: '🌀',
+      label: 'Спиральная галактика',
+      text: 'Тип Sa. Расстояние: 240 млн св. лет. Красное смещение z=0.018. Диаметр: ~90 000 св. лет. Активное ядро с признаками сейфертовской активности.'
+    },
+    {
+      icon: '⚡',
+      label: 'Гамма-всплеск',
+      text: 'Зафиксирован источник кратковременного гамма-всплеска. Длительность: 0.8 с. Энергия: 10⁵² эрг. Возможная природа: слияние нейтронных звёзд.'
+    },
+    {
+      icon: '🕳️',
+      label: 'Чёрная дыра звёздной массы',
+      text: 'Масса: ~8 солнечных масс. Радиус Шварцшильда: 24 км. Аккреционный диск: обнаружен. Рентгеновское излучение: 10³⁶ эрг/с.'
+    },
+    {
+      icon: '☄️',
+      label: 'Межзвёздный объект',
+      text: 'Объект типа 1I/\'Oumuamua. Гиперболическая траектория. Скорость: 26 км/с. Состав: богат углеродом. Предположительно — планетезималь чужой звезды.'
+    }
+  ];
+
+  let lensActive = false;
+  let currentObject = null;
+  let detectTimeout;
+
+  function raToStr(x, y) {
+    const h = Math.floor(x / 15) % 24;
+    const m = Math.floor((x % 15) * 4);
+    const s = Math.floor(Math.random() * 60);
+    const deg = Math.floor(y * 90);
+    const min = Math.floor(Math.random() * 60);
+    return `RA ${h.toString().padStart(2,'0')}h ${m.toString().padStart(2,'0')}m ${s.toString().padStart(2,'0')}s · DEC ${deg > 0 ? '+' : ''}${deg}° ${min.toString().padStart(2,'0')}′`;
+  }
+
+  lensContainer.addEventListener('mousemove', (e) => {
+    const rect = lensContainer.getBoundingClientRect();
+    const cx = rect.width / 2;
+    const cy = rect.height / 2;
+    const dx = e.clientX - rect.left;
+    const dy = e.clientY - rect.top;
+
+    const pctX = (dx / rect.width) * 100;
+    const pctY = (dy / rect.height) * 100;
+
+    // Move universe
+    lensUniverse.style.backgroundPosition = `${pctX}% ${pctY}%`;
+
+    // Update coords
+    lensCoords.textContent = raToStr(pctX * 3.6, pctY - 50);
+
+    // Detect objects
+    clearTimeout(detectTimeout);
+    foundObject.classList.remove('visible');
+    detectTimeout = setTimeout(() => {
+      if (Math.random() < 0.4) {
+        const obj = spaceObjects[Math.floor(Math.random() * spaceObjects.length)];
+        const ox = 20 + Math.random() * 60;
+        const oy = 20 + Math.random() * 60;
+        foundObject.style.left = ox + '%';
+        foundObject.style.top = oy + '%';
+        foundObject.classList.add('visible');
+        infoLabel.textContent = obj.label;
+        infoText.textContent = obj.text;
+        const icon = telescopeInfo.querySelector('.telescope-info-icon');
+        if (icon) icon.textContent = obj.icon;
+      }
+    }, 500);
+  });
+
+  lensContainer.addEventListener('mouseleave', () => {
+    foundObject.classList.remove('visible');
+    clearTimeout(detectTimeout);
+  });
+
+  // =====================
+  // BLACK HOLE MOUSE
+  // =====================
+  const bhVisual = document.getElementById('blackholeVisual');
+  const bhSection = document.querySelector('.blackhole-section');
+  if (bhSection && bhVisual) {
+    bhSection.addEventListener('mousemove', (e) => {
+      const rect = bhSection.getBoundingClientRect();
+      const cx = rect.width / 2;
+      const cy = rect.height / 2;
+      const dx = (e.clientX - rect.left - cx) / cx;
+      const dy = (e.clientY - rect.top - cy) / cy;
+      bhVisual.style.transform = `translateY(-50%) translate(${dx * 15}px, ${dy * 15}px)`;
+    });
+    bhSection.addEventListener('mouseleave', () => {
+      bhVisual.style.transform = 'translateY(-50%)';
+    });
+  }
+
+  // =====================
+  // COUNT UP
+  // =====================
+  const countEls = document.querySelectorAll('.count-up');
+  const countObserver = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const el = e.target;
+        const target = parseInt(el.dataset.target);
+        let current = 0;
+        const step = Math.ceil(target / 60);
+        const timer = setInterval(() => {
+          current = Math.min(current + step, target);
+          el.textContent = current;
+          if (current >= target) clearInterval(timer);
+        }, 30);
+        countObserver.unobserve(el);
+      }
+    });
+  }, { threshold: 0.5 });
+  countEls.forEach(el => countObserver.observe(el));
+
+  // =====================
+  // MOBILE NAV LINKS (touch)
+  // =====================
+  document.querySelectorAll('a[href^="#"]').forEach(link => {
+    link.addEventListener('click', (e) => {
+      const target = document.querySelector(link.getAttribute('href'));
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+  });
+
+  // =====================
+  // MOBILE CURSOR HIDE
+  // =====================
+  if ('ontouchstart' in window) {
+    cursor.style.display = 'none';
+    ring.style.display = 'none';
+    document.body.style.cursor = 'auto';
+  }
+
+  // =====================
+  // PLANETS ROW DRAG SCROLL
+  // =====================
+  const planetsRow = document.querySelector('.planets-row');
+  if (planetsRow) {
+    let isDown = false, startX, scrollLeft;
+    planetsRow.addEventListener('mousedown', (e) => {
+      isDown = true;
+      planetsRow.style.cursor = 'grabbing';
+      startX = e.pageX - planetsRow.offsetLeft;
+      scrollLeft = planetsRow.scrollLeft;
+    });
+    planetsRow.addEventListener('mouseleave', () => { isDown = false; planetsRow.style.cursor = 'default'; });
+    planetsRow.addEventListener('mouseup', () => { isDown = false; planetsRow.style.cursor = 'default'; });
+    planetsRow.addEventListener('mousemove', (e) => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - planetsRow.offsetLeft;
+      planetsRow.scrollLeft = scrollLeft - (x - startX);
+    });
+  }
+})();
+</script>
+</body>
+</html>
